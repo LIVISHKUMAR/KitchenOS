@@ -1,8 +1,8 @@
-# RestroPOS - Scalable Restaurant Management & POS Platform
+# KitchenOS - Scalable Restaurant Management & POS Platform
 
 ## Executive Summary
 
-**Project:** RestroPOS - Enterprise Restaurant Management SaaS Platform  
+**Project:** KitchenOS - Enterprise Restaurant Management SaaS Platform  
 **Timeline:** 2-Day MVP (production-ready foundation)  
 **Team:** 1-2 developers  
 **Target Cloud:** Oracle Cloud Infrastructure  
@@ -859,7 +859,7 @@ import os
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "RestroPOS"
+    APP_NAME: str = "KitchenOS"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     

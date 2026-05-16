@@ -4,7 +4,7 @@ import os
 
 class Settings(BaseSettings):
     # App
-    APP_NAME: str = "RestroPOS"
+    APP_NAME: str = "KitchenOS"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     

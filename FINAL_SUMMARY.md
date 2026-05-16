@@ -1,4 +1,4 @@
-# RestroPOS Foundation Implementation Complete
+# KitchenOS Foundation Implementation Complete
 
 ## What Has Been Implemented
 

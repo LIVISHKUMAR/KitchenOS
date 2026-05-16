@@ -104,7 +104,7 @@ const POSPage = () => {
       {/* Main Content */}
       <main className="flex-1 p-6">
         <header className="mb-6">
-          <h1 className="text-2xl font-bold">RestroPOS Terminal</h1>
+          <h1 className="text-2xl font-bold">KitchenOS Terminal</h1>
           <p className="text-gray-600">Table: {selectedTable || 'Not selected'}</p>
         </header>
 

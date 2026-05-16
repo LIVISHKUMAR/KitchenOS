@@ -1,4 +1,4 @@
-# RestroPOS Implementation Progress Report
+# KitchenOS Implementation Progress Report
 
 ## Accomplished Tasks
 
