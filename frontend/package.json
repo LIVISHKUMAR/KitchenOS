@@ -1,0 +1,13 @@
+{
+  "name": "restropos-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter ./apps/pos dev",
+    "build": "pnpm --filter ./apps/pos build",
+    "test": "pnpm --filter ./apps/pos test"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
