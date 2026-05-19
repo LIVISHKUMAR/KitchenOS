@@ -22,6 +22,7 @@ async def get_current_user(
             detail="Invalid or expired token"
         )
 
+    # Set context vars (thread-safe via contextvars)
     tenant_context.set(
         tenant_id=payload.get("tenant_id"),
         branch_id=payload.get("branch_id"),

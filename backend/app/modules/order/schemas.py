@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
+
 class OrderItemBase(BaseModel):
     menu_item_id: str
     item_name: str
@@ -10,7 +11,7 @@ class OrderItemBase(BaseModel):
     unit_price: float
     tax_amount: float = 0
     discount_amount: float = 0
-    total: float
+    total: float = 0
     variant_id: Optional[str] = None
     variant_name: Optional[str] = None
     modifiers: Optional[List[dict]] = []
@@ -19,8 +20,10 @@ class OrderItemBase(BaseModel):
     prep_status: Optional[str] = 'pending'
     priority: Optional[str] = 'normal'
 
+
 class OrderItemCreate(OrderItemBase):
     pass
+
 
 class OrderItemUpdate(BaseModel):
     menu_item_id: Optional[str] = None
@@ -39,50 +42,36 @@ class OrderItemUpdate(BaseModel):
     prep_status: Optional[str] = None
     priority: Optional[str] = None
 
+
 class OrderItemResponse(OrderItemBase):
     id: str
     order_id: str
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 class OrderBase(BaseModel):
-    order_number: str
-    tenant_id: str
-    branch_id: str
+    order_type: str
     table_id: Optional[str] = None
-    order_type: str  # dine_in/takeaway/delivery/qr
-    status: str = 'pending'  # pending → confirmed → preparing → ready → completed → cancelled
     customer_id: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
-    subtotal: float = 0
-    tax_amount: float = 0
-    discount_amount: float = 0
-    tip_amount: float = 0
-    total: float = 0
-    payment_status: str = 'pending'  # pending/partial/paid/refunded
     special_instructions: Optional[str] = None
-    source: str = 'pos'  # pos/kds/qr/aggregator
-    delivery_address: Optional[dict] = None
-    delivery_partner: Optional[str] = None
-    aggregator_order_id: Optional[str] = None
-    scheduled_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    created_by: Optional[str] = None
-    assigned_to: Optional[str] = None
+    source: str = 'pos'
+
 
 class OrderCreate(OrderBase):
+    branch_id: Optional[str] = None
     items: List[OrderItemCreate]
+    discount_amount: Optional[float] = 0
+
 
 class OrderUpdate(BaseModel):
-    order_number: Optional[str] = None
-    tenant_id: Optional[str] = None
-    branch_id: Optional[str] = None
-    table_id: Optional[str] = None
     order_type: Optional[str] = None
     status: Optional[str] = None
+    table_id: Optional[str] = None
     customer_id: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
@@ -94,6 +83,27 @@ class OrderUpdate(BaseModel):
     payment_status: Optional[str] = None
     special_instructions: Optional[str] = None
     source: Optional[str] = None
+
+
+class OrderResponse(BaseModel):
+    id: str
+    order_number: str
+    tenant_id: str
+    branch_id: str
+    table_id: Optional[str] = None
+    order_type: str
+    status: str
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    subtotal: float = 0
+    tax_amount: float = 0
+    discount_amount: float = 0
+    tip_amount: float = 0
+    total: float = 0
+    payment_status: str = 'pending'
+    special_instructions: Optional[str] = None
+    source: str = 'pos'
     delivery_address: Optional[dict] = None
     delivery_partner: Optional[str] = None
     aggregator_order_id: Optional[str] = None
@@ -101,12 +111,9 @@ class OrderUpdate(BaseModel):
     completed_at: Optional[datetime] = None
     created_by: Optional[str] = None
     assigned_to: Optional[str] = None
-
-class OrderResponse(OrderBase):
-    id: str
     items: List[OrderItemResponse] = []
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

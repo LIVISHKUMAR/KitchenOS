@@ -3,9 +3,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from app.modules.auth.schemas import RegisterRequest, LoginRequest
-from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token, decode_token
 from app.core.config import tenant_context
-from app.api.exceptions import UnauthorizedException, BadRequestException, ConflictException
+from app.api.exceptions import UnauthorizedException, ConflictException
 from app.models import Tenant, User, Branch
 
 
@@ -14,11 +14,11 @@ class AuthService:
         self.db = db
 
     def register(self, data: RegisterRequest) -> dict:
-        existing_tenant = self.db.query(Tenant).filter(
-            and_(Tenant.email == data.email)
+        existing_user = self.db.query(User).filter(
+            User.email == data.email
         ).first()
 
-        if existing_tenant:
+        if existing_user:
             raise ConflictException("Email already registered")
 
         tenant_id = str(uuid.uuid4())
@@ -31,7 +31,6 @@ class AuthService:
             slug=data.name.lower().replace(" ", "-") + "-" + str(uuid.uuid4())[:8],
             email=data.email,
             phone=data.phone,
-            business_type=data.business_type,
             subscription_plan="trial",
             subscription_status="trial",
             max_branches=1,
@@ -48,7 +47,7 @@ class AuthService:
             is_active=True
         )
 
-        password_hash = hash_password(data.password)
+        password_hash = get_password_hash(data.password)
         user = User(
             id=user_id,
             tenant_id=tenant_id,
@@ -145,7 +144,7 @@ class AuthService:
     def refresh_access_token(self, refresh_token: str) -> dict:
         payload = decode_token(refresh_token)
 
-        if not payload or payload.get("type") != "refresh":
+        if not payload:
             raise UnauthorizedException("Invalid refresh token")
 
         user_id = payload.get("user_id")
@@ -164,5 +163,6 @@ class AuthService:
         })
 
         return {
-            "access_token": access_token
+            "access_token": access_token,
+            "token_type": "bearer"
         }

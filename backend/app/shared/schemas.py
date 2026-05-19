@@ -35,6 +35,6 @@ class BaseSchema(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    success: False
+    success: bool = False
     error: str
     detail: Optional[str] = None

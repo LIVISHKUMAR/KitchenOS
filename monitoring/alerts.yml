@@ -1,0 +1,72 @@
+groups:
+  - name: kitchenos_alerts
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} per second"
+
+      # Slow API Response
+      - alert: SlowAPIResponse
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow API response time"
+          description: "p95 latency is {{ $value }} seconds"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "{{ $value }} active connections"
+
+      # Redis Memory
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using {{ $value | humanizePercentage }} of max memory"
+
+      # Service Down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.instance }} is unreachable"
+
+      # Low Stock Alert
+      - alert: LowStockItems
+        expr: kitchenos_low_stock_items > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Multiple low stock items"
+          description: "{{ $value }} items below minimum stock"
+
+      # High Order Volume
+      - alert: HighOrderVolume
+        expr: kitchenos_orders_last_hour > 200
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "High order volume"
+          description: "{{ $value }} orders in the last hour"

@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date, datetime
 
+
 class CustomerBase(BaseModel):
     name: str
     email: Optional[str] = None
@@ -17,8 +18,10 @@ class CustomerBase(BaseModel):
     delivery_addresses: Optional[List[dict]] = []
     is_active: Optional[bool] = True
 
+
 class CustomerCreate(CustomerBase):
     tenant_id: str
+
 
 class CustomerUpdate(BaseModel):
     name: Optional[str] = None
@@ -35,14 +38,15 @@ class CustomerUpdate(BaseModel):
     delivery_addresses: Optional[List[dict]] = None
     is_active: Optional[bool] = None
 
+
 class CustomerResponse(CustomerBase):
     id: str
     tenant_id: str
     total_orders: int = 0
     total_spent: float = 0.0
-    average_order_value: float = 0.0
-    created_at: datetime
-    updated_at: datetime
+    average_order_value: Optional[float] = 0.0
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

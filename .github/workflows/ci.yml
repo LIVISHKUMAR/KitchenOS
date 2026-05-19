@@ -1,0 +1,94 @@
+name: KitchenOS CI/CD
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Backend Lint & Test
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run tests
+        run: |
+          cd backend
+          python -m pytest tests/ -v --tb=short
+        env:
+          SECRET_KEY: test-secret-key-for-ci-only
+
+      - name: Check imports
+        run: |
+          cd backend
+          python -c "from app.main import app; print('OK')"
+
+  # Frontend Build
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          pnpm install
+
+      - name: TypeScript check
+        run: |
+          cd frontend/apps/pos
+          npx tsc --noEmit
+
+      - name: Build
+        run: |
+          cd frontend
+          pnpm build
+
+  # Docker Build
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: docker build -t kitchenos-backend:${{ github.sha }} ./backend
+
+      - name: Build frontend Docker image
+        run: docker build -t kitchenos-frontend:${{ github.sha }} ./frontend
+
+  # Deploy (placeholder)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy notification
+        run: echo "Ready for deployment to production"

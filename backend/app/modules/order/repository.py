@@ -1,43 +1,39 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import func
 from app.models import Order, OrderItem
-import uuid
 from datetime import datetime
+
 
 class OrderRepository:
     def __init__(self, db: Session):
         self.db = db
-    
+
     def create_order_with_items(self, order: dict, order_items: List[dict]) -> dict:
         db_order = Order(**order)
         self.db.add(db_order)
-        self.db.flush()  # Get the ID without committing
-        
-        # Create order items
+        self.db.flush()
+
         for item_data in order_items:
             item_data["order_id"] = db_order.id
             db_item = OrderItem(**item_data)
             self.db.add(db_item)
-        
+
         self.db.commit()
         self.db.refresh(db_order)
-        
-        # Return the order with items
+
         return self.get_order_with_items(str(db_order.id))
-    
+
     def get_order(self, order_id: str) -> Optional[Order]:
         return self.db.query(Order).filter(Order.id == order_id).first()
-    
+
     def get_order_with_items(self, order_id: str) -> Optional[dict]:
         order = self.get_order(order_id)
         if not order:
             return None
-        
-        # Get order items
+
         items = self.db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
-        
-        # Convert to dict format
+
         order_dict = {
             "id": str(order.id),
             "order_number": order.order_number,
@@ -64,11 +60,12 @@ class OrderRepository:
             "completed_at": order.completed_at.isoformat() if order.completed_at else None,
             "created_by": str(order.created_by) if order.created_by else None,
             "assigned_to": str(order.assigned_to) if order.assigned_to else None,
-            "created_at": order.created_at.isoformat(),
-            "updated_at": order.updated_at.isoformat(),
+            "created_at": order.created_at.isoformat() if order.created_at else None,
+            "updated_at": order.updated_at.isoformat() if order.updated_at else None,
             "items": [
                 {
                     "id": str(item.id),
+                    "order_id": str(item.order_id),
                     "menu_item_id": str(item.menu_item_id),
                     "item_name": item.item_name,
                     "item_code": item.item_code,
@@ -87,14 +84,14 @@ class OrderRepository:
                     "ready_at": item.ready_at.isoformat() if item.ready_at else None,
                     "served_at": item.served_at.isoformat() if item.served_at else None,
                     "priority": item.priority,
-                    "created_at": item.created_at.isoformat()
+                    "created_at": item.created_at.isoformat() if item.created_at else None,
                 }
                 for item in items
             ]
         }
-        
+
         return order_dict
-    
+
     def update_order_status(self, order_id: str, new_status: str) -> dict:
         order = self.get_order(order_id)
         if order:
@@ -104,21 +101,18 @@ class OrderRepository:
             self.db.refresh(order)
             return self.get_order_with_items(order_id)
         return None
-    
+
     def get_orders_by_status(self, filters: dict, statuses: List[str]) -> List[dict]:
         query = self.db.query(Order)
-        
-        # Apply filters
+
         for key, value in filters.items():
             if hasattr(Order, key):
                 query = query.filter(getattr(Order, key) == value)
-        
-        # Filter by status
+
         query = query.filter(Order.status.in_(statuses))
-        
+
         orders = query.all()
-        
-        # Convert to dict format
+
         return [
             {
                 "id": str(order.id),
@@ -146,12 +140,12 @@ class OrderRepository:
                 "completed_at": order.completed_at.isoformat() if order.completed_at else None,
                 "created_by": str(order.created_by) if order.created_by else None,
                 "assigned_to": str(order.assigned_to) if order.assigned_to else None,
-                "created_at": order.created_at.isoformat(),
-                "updated_at": order.updated_at.isoformat()
+                "created_at": order.created_at.isoformat() if order.created_at else None,
+                "updated_at": order.updated_at.isoformat() if order.updated_at else None,
             }
             for order in orders
         ]
-    
+
     def get_today_order_count(self, tenant_id: str) -> int:
         today = datetime.utcnow().date()
         return self.db.query(Order).filter(

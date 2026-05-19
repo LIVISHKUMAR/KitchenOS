@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kitchenos-frontend
+  labels:
+    app: kitchenos-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kitchenos-frontend
+  template:
+    metadata:
+      labels:
+        app: kitchenos-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: kitchenos-frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kitchenos-frontend-service
+spec:
+  selector:
+    app: kitchenos-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kitchenos-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - api.kitchenos.com
+        - app.kitchenos.com
+      secretName: kitchenos-tls
+  rules:
+    - host: api.kitchenos.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kitchenos-backend-service
+                port:
+                  number: 8000
+    - host: app.kitchenos.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kitchenos-frontend-service
+                port:
+                  number: 80

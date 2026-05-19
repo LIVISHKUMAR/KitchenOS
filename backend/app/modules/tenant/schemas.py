@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class TenantBase(BaseModel):
     name: str
     slug: str
@@ -16,8 +17,10 @@ class TenantBase(BaseModel):
     settings: Optional[dict] = {}
     is_active: Optional[bool] = True
 
+
 class TenantCreate(TenantBase):
     pass
+
 
 class TenantUpdate(BaseModel):
     name: Optional[str] = None
@@ -33,10 +36,11 @@ class TenantUpdate(BaseModel):
     settings: Optional[dict] = None
     is_active: Optional[bool] = None
 
+
 class TenantResponse(TenantBase):
     id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

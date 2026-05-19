@@ -1,0 +1,106 @@
+{
+  "dashboard": {
+    "title": "KitchenOS Dashboard",
+    "tags": ["kitchenos", "restaurant"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Active Orders",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kitchenos_active_orders",
+            "legendFormat": "Active Orders"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "title": "Today's Revenue",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kitchenos_revenue_today",
+            "legendFormat": "Revenue"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "title": "Orders Today",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kitchenos_orders_today",
+            "legendFormat": "Orders"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "title": "Active Tenants",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kitchenos_tenants_total",
+            "legendFormat": "Tenants"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "title": "Orders per Hour",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "kitchenos_orders_last_hour",
+            "legendFormat": "Orders/Hour"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "title": "API Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "title": "Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m])",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "title": "Database Connections",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "Connections"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+}

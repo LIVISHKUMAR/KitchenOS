@@ -1,49 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { tablesApi, type DiningTable } from '../api';
 
 interface TableSelectionProps {
   selectedTable: string | null;
-  onTableSelect: (tableId: string) => void;
+  onTableSelect: (tableId: string | null) => void;
 }
 
 const TableSelection: React.FC<TableSelectionProps> = ({ selectedTable, onTableSelect }) => {
-  // Sample tables - in a real app, this would come from API
-  const tables = [
-    { id: '1', number: '1', capacity: 4, section: 'Main' },
-    { id: '2', number: '2', capacity: 4, section: 'Main' },
-    { id: '3', number: '3', capacity: 2, section: 'Terrace' },
-    { id: '4', number: '4', capacity: 6, section: 'Private' },
-    { id: '5', number: '5', capacity: 4, section: 'Main' },
-  ];
+  const [tables, setTables] = useState<DiningTable[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadTables();
+  }, []);
+
+  const loadTables = async () => {
+    try {
+      const data = await tablesApi.getTables();
+      setTables(data);
+    } catch {
+      // Tables API not yet available, use fallback
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-4 text-gray-500 text-sm">Loading tables...</div>;
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold">Select Table</h3>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-sm">Tables</h3>
         {selectedTable && (
-          <span className="text-sm text-gray-500">Table #{selectedTable}</span>
+          <button
+            onClick={() => onTableSelect(null)}
+            className="text-xs text-blue-500 hover:text-blue-700"
+          >
+            Clear
+          </button>
         )}
       </div>
-      <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-2">
         {tables.map(table => (
           <button
             key={table.id}
-            onClick={() => onTableSelect(table.id)}
-            className={`w-full text-left p-3 border rounded hover:bg-gray-50 
-              ${selectedTable === table.id ? 'bg-blue-50 border-blue-500' : 'border-gray-200'}`}
+            onClick={() => onTableSelect(selectedTable === table.id ? null : table.id)}
+            className={`p-2 border rounded text-center text-sm transition-colors ${
+              selectedTable === table.id
+                ? 'bg-blue-500 text-white border-blue-500'
+                : table.current_order_id
+                  ? 'bg-orange-50 border-orange-300 text-orange-700'
+                  : 'bg-white border-gray-200 hover:bg-gray-50'
+            }`}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Table {table.number}</p>
-                <p className="text-sm text-gray-500">{table.section} • {table.capacity} seats</p>
-              </div>
-              <span className="ml-4">
-                {selectedTable === table.id ? (
-                  <svg className="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : ''}
-              </span>
-            </div>
+            <div className="font-medium">{table.table_number}</div>
+            <div className="text-xs opacity-75">{table.capacity}p</div>
           </button>
         ))}
       </div>
