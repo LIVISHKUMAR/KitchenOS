@@ -9,6 +9,8 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@kitchenos/i18n": "workspace:*",
+    "@tanstack/react-query": "^5.0.0",
     "autoprefixer": "^10.5.0",
     "axios": "^1.16.1",
     "react": "^18.2.0",

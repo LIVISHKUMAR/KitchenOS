@@ -10,7 +10,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
         settings.DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-        echo=settings.DEBUG,
+        echo=settings.DB_ECHO or settings.DEBUG,
     )
 else:
     from sqlalchemy.pool import QueuePool
@@ -19,8 +19,10 @@ else:
         poolclass=QueuePool,
         pool_size=settings.DB_POOL_SIZE,
         max_overflow=settings.DB_MAX_OVERFLOW,
+        pool_timeout=settings.DB_POOL_TIMEOUT,
+        pool_recycle=settings.DB_POOL_RECYCLE,
         pool_pre_ping=True,
-        echo=settings.DEBUG,
+        echo=settings.DB_ECHO or settings.DEBUG,
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
