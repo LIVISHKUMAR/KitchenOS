@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.models import User
 from app.core.security import get_password_hash
@@ -45,7 +46,7 @@ class UserResponse(UserBase):
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user: UserCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("user:create")),
     db: Session = Depends(get_db_session)
 ):
     db_user = User(
@@ -94,7 +95,7 @@ async def read_user(
 async def update_user(
     user_id: str,
     user: UserUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("user:update")),
     db: Session = Depends(get_db_session)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -115,7 +116,7 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("user:delete")),
     db: Session = Depends(get_db_session)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()

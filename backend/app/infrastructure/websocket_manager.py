@@ -271,3 +271,8 @@ async def notify_kot_updated(tenant_id: str, branch_id: str, kot_data: dict):
         "data": kot_data,
         "timestamp": datetime.utcnow().isoformat()
     })
+
+
+async def notify_customer_display(tenant_id: str, branch_id: str, display_data: dict):
+    """Push event to customer display screens."""
+    await ws_manager.send_to_client_type(tenant_id, branch_id, "display", display_data)

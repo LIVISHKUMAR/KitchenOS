@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.modules.tax.service import TaxService
 
@@ -42,7 +43,7 @@ class TaxConfigResponse(BaseModel):
 @router.post("/", response_model=TaxConfigResponse, status_code=status.HTTP_201_CREATED)
 async def create_tax_config(
     tax: TaxConfigCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("tax:create")),
     db: Session = Depends(get_db_session)
 ):
     tax_service = TaxService(db)

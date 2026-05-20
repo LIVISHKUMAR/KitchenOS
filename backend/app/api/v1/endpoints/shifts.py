@@ -6,7 +6,8 @@ from datetime import datetime, time
 import uuid
 from app.api.dependencies import get_current_user
 from app.infrastructure.database import get_db_session
-from app.models import Shift, ShiftAssignment
+from app.models import Shift, ShiftAssignment, Order, Payment
+from app.modules.auth.rbac import require_permission
 
 router = APIRouter()
 
@@ -183,3 +184,97 @@ async def list_assignments(
         }
         for a in assignments
     ]
+
+
+class ZReportRequest(BaseModel):
+    branch_id: str
+    date: Optional[str] = None  # YYYY-MM-DD, defaults to today
+    cash_counted: Optional[float] = None  # Cash counted by manager
+
+
+@router.post("/z-report")
+async def generate_z_report(
+    data: ZReportRequest,
+    current_user: dict = Depends(require_permission("report:read")),
+    db: Session = Depends(get_db_session)
+):
+    """Generate Z-report (end of day shift closing report)."""
+    target_date = datetime.strptime(data.date, "%Y-%m-%d").date() if data.date else datetime.utcnow().date()
+
+    # Get orders for the day
+    start = datetime.combine(target_date, datetime.min.time())
+    end = datetime.combine(target_date, datetime.max.time())
+
+    orders = db.query(Order).filter(
+        Order.branch_id == data.branch_id,
+        Order.created_at >= start,
+        Order.created_at <= end,
+        Order.status.in_(["completed", "ready"])
+    ).all()
+
+    # Get payments for the day
+    payments = db.query(Payment).filter(
+        Payment.branch_id == data.branch_id,
+        Payment.created_at >= start,
+        Payment.created_at <= end,
+        Payment.status == "completed"
+    ).all()
+
+    # Calculate totals
+    total_orders = len(orders)
+    total_revenue = sum(float(o.total or 0) for o in orders)
+    total_tax = sum(float(o.tax_amount or 0) for o in orders)
+    total_discount = sum(float(o.discount_amount or 0) for o in orders)
+
+    # Payment breakdown
+    payment_breakdown = {}
+    for p in payments:
+        method = p.payment_method or "unknown"
+        if method not in payment_breakdown:
+            payment_breakdown[method] = {"count": 0, "total": 0}
+        payment_breakdown[method]["count"] += 1
+        payment_breakdown[method]["total"] += float(p.amount or 0)
+
+    # Cash expected
+    cash_expected = payment_breakdown.get("cash", {}).get("total", 0)
+
+    # Discrepancy
+    discrepancy = None
+    if data.cash_counted is not None:
+        discrepancy = round(data.cash_counted - cash_expected, 2)
+
+    # Order type breakdown
+    order_types = {}
+    for o in orders:
+        otype = o.order_type or "unknown"
+        if otype not in order_types:
+            order_types[otype] = {"count": 0, "revenue": 0}
+        order_types[otype]["count"] += 1
+        order_types[otype]["revenue"] += float(o.total or 0)
+
+    return {
+        "date": target_date.isoformat(),
+        "branch_id": data.branch_id,
+        "generated_by": current_user["user_id"],
+        "generated_at": datetime.utcnow().isoformat(),
+        "summary": {
+            "total_orders": total_orders,
+            "total_revenue": round(total_revenue, 2),
+            "total_tax": round(total_tax, 2),
+            "total_discount": round(total_discount, 2),
+            "avg_order_value": round(total_revenue / total_orders, 2) if total_orders > 0 else 0,
+        },
+        "payment_breakdown": [
+            {"method": method, "count": data["count"], "total": round(data["total"], 2)}
+            for method, data in payment_breakdown.items()
+        ],
+        "order_types": [
+            {"type": t, "count": data["count"], "revenue": round(data["revenue"], 2)}
+            for t, data in order_types.items()
+        ],
+        "cash_reconciliation": {
+            "cash_expected": round(cash_expected, 2),
+            "cash_counted": data.cash_counted,
+            "discrepancy": discrepancy,
+        }
+    }

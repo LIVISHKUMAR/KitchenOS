@@ -8,6 +8,9 @@ from app.modules.order.repository import OrderRepository
 from app.modules.order.events import OrderCreatedEvent, OrderStatusChangedEvent
 from app.core.config import tenant_context
 from app.infrastructure.messaging import publish
+from app.infrastructure.websocket_manager import (
+    notify_order_created, notify_order_updated, notify_table_updated
+)
 from app.models import MenuItem, MenuVariant, MenuModifier, MenuModifierGroup
 
 
@@ -117,6 +120,30 @@ class OrderService:
         )
         self._publish_event(event)
 
+        # WebSocket notification for real-time updates
+        try:
+            import asyncio
+            order_ws_data = {
+                "id": order["id"],
+                "order_number": order_number,
+                "order_type": data.order_type,
+                "table_id": data.table_id,
+                "status": "pending",
+                "items": enriched_items,
+                "total": round(total, 2),
+                "source": data.source or "pos",
+            }
+            asyncio.create_task(notify_order_created(
+                tenant_context.tenant_id, branch_id, order_ws_data
+            ))
+            if data.table_id:
+                asyncio.create_task(notify_table_updated(
+                    tenant_context.tenant_id, branch_id,
+                    {"id": data.table_id, "current_order_id": order["id"], "status": "occupied"}
+                ))
+        except Exception:
+            pass  # Don't fail order creation if WS notification fails
+
         return result
 
     def update_status(self, order_id: str, new_status: str) -> dict:
@@ -142,6 +169,25 @@ class OrderService:
             updated_by=tenant_context.user_id
         )
         self._publish_event(event)
+
+        # WebSocket notification for real-time updates
+        try:
+            import asyncio
+            asyncio.create_task(notify_order_updated(
+                tenant_context.tenant_id,
+                order.branch_id if hasattr(order, 'branch_id') else tenant_context.branch_id,
+                {"id": order_id, "status": new_status, "old_status": old_status}
+            ))
+            if new_status in ("completed", "cancelled"):
+                table = self.db.query(DiningTable).filter(DiningTable.current_order_id == order_id).first()
+                if table:
+                    asyncio.create_task(notify_table_updated(
+                        tenant_context.tenant_id,
+                        order.branch_id if hasattr(order, 'branch_id') else tenant_context.branch_id,
+                        {"id": str(table.id), "current_order_id": None, "status": "free"}
+                    ))
+        except Exception:
+            pass
 
         if new_status == "ready":
             self._notify_customer(order_id)

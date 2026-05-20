@@ -4,9 +4,11 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.models import Order, OrderItem
 from app.modules.order.repository import OrderRepository
+from app.infrastructure.websocket_manager import notify_kot_updated, notify_order_updated
 
 router = APIRouter()
 
@@ -135,12 +137,37 @@ async def update_item_prep_status(
     db.commit()
 
     # Check if all items in the order are ready
+    order_status_changed = False
     if body.prep_status == "ready":
         all_items = db.query(OrderItem).filter(OrderItem.order_id == item.order_id).all()
         all_ready = all(i.prep_status in ("ready", "served") for i in all_items)
         if all_ready:
             order.status = "ready"
+            order_status_changed = True
             db.commit()
+
+    # WebSocket notification for real-time KDS/POS updates
+    try:
+        import asyncio
+        asyncio.create_task(notify_kot_updated(
+            str(order.tenant_id),
+            str(order.branch_id),
+            {
+                "item_id": item_id,
+                "order_id": str(order.id),
+                "order_number": order.order_number,
+                "prep_status": body.prep_status,
+                "item_name": item.item_name,
+            }
+        ))
+        if order_status_changed:
+            asyncio.create_task(notify_order_updated(
+                str(order.tenant_id),
+                str(order.branch_id),
+                {"id": str(order.id), "status": "ready"}
+            ))
+    except Exception:
+        pass
 
     return {"item_id": item_id, "prep_status": body.prep_status, "message": "Status updated"}
 

@@ -24,6 +24,12 @@ export interface Payment {
   created_at: string;
 }
 
+export interface RefundRequest {
+  payment_id: string;
+  amount: number;
+  reason: string;
+}
+
 export const paymentsApi = {
   create: (payment: PaymentCreate) =>
     apiClient.post<Payment>('/payments/', payment),
@@ -33,4 +39,10 @@ export const paymentsApi = {
 
   getByOrder: (orderId: string) =>
     apiClient.get<Payment[]>(`/payments/order/${orderId}`),
+
+  refund: (data: RefundRequest) =>
+    apiClient.post('/payments/refund', data),
+
+  void: (paymentId: string, reason: string) =>
+    apiClient.post(`/payments/${paymentId}/void`, { reason }),
 };

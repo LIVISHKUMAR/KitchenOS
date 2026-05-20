@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.modules.menu.service import MenuService
 from app.modules.menu.schemas import (
@@ -19,7 +20,7 @@ router = APIRouter()
 @router.post("/categories", response_model=MenuCategoryResponse, status_code=status.HTTP_201_CREATED)
 async def create_category(
     category: MenuCategoryCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("menu:create")),
     db: Session = Depends(get_db_session)
 ):
     menu_service = MenuService(db)
@@ -102,7 +103,7 @@ async def delete_category(
 @router.post("/items", response_model=MenuItemResponse, status_code=status.HTTP_201_CREATED)
 async def create_item(
     item: MenuItemCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("menu:create")),
     db: Session = Depends(get_db_session)
 ):
     menu_service = MenuService(db)

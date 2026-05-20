@@ -17,7 +17,8 @@ from app.api.v1.endpoints import (
     recommendations, menu_schedule, discounts, voice, ocr,
     fast_billing, shifts_v2, ws_v2, floor_plan,
     aggregator_v2, whatsapp, loyalty_v2, multi_outlet,
-    ai_features, i18n_v2, open_api, advanced_dashboard
+    ai_features, i18n_v2, open_api, advanced_dashboard,
+    razorpay
 )
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -96,3 +97,30 @@ api_router.include_router(ai_features.router, prefix="/ai", tags=["ai"])
 api_router.include_router(i18n_v2.router, prefix="/i18n-v2", tags=["i18n-v2"])
 api_router.include_router(open_api.router, prefix="/open-api", tags=["open-api"])
 api_router.include_router(advanced_dashboard.router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(razorpay.router, prefix="/razorpay", tags=["razorpay"])
+
+# Customer display events endpoint
+from fastapi import APIRouter as _AR, Depends as _Depends
+from app.api.dependencies import get_current_user as _get_current_user
+
+display_router = _AR()
+
+@display_router.post("/display/event")
+async def push_display_event(
+    event_type: str,
+    data: dict = None,
+    current_user: dict = _Depends(_get_current_user)
+):
+    """Push event to customer display via WebSocket."""
+    from app.infrastructure.websocket_manager import notify_customer_display
+    try:
+        await notify_customer_display(
+            current_user["tenant_id"],
+            current_user.get("branch_id"),
+            {"type": event_type, "data": data or {}}
+        )
+    except Exception:
+        pass
+    return {"status": "sent"}
+
+api_router.include_router(display_router, prefix="/pos", tags=["display"])

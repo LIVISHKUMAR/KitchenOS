@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.modules.order.service import OrderService
 from app.modules.order.schemas import (
@@ -16,7 +17,7 @@ router = APIRouter()
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     order: OrderCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("order:create")),
     db: Session = Depends(get_db_session)
 ):
     order_service = OrderService(db)
@@ -62,7 +63,7 @@ async def read_order(
 async def update_order(
     order_id: str,
     order_update: OrderUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("order:update")),
     db: Session = Depends(get_db_session)
 ):
     order_service = OrderService(db)
@@ -102,7 +103,7 @@ async def update_order(
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_order(
     order_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("order:delete")),
     db: Session = Depends(get_db_session)
 ):
     order_service = OrderService(db)

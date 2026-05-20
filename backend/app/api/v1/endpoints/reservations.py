@@ -1,10 +1,11 @@
-"""Table reservation endpoints."""
+"""Table reservation and waitlist endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
+import uuid
 from app.api.dependencies import get_current_user
 from app.infrastructure.database import get_db_session
 from app.modules.reservation.service import ReservationService
@@ -86,3 +87,71 @@ async def available_slots(
 ):
     service = ReservationService(db)
     return service.get_available_slots(branch_id, date, party_size)
+
+
+# --- Waitlist ---
+
+_waitlist: list = []
+
+
+class WaitlistEntry(BaseModel):
+    customer_name: str
+    customer_phone: str
+    party_size: int
+    notes: Optional[str] = None
+
+
+@router.post("/waitlist", status_code=201)
+async def add_to_waitlist(
+    data: WaitlistEntry,
+    current_user: dict = Depends(get_current_user),
+):
+    """Add a walk-in customer to the waitlist."""
+    entry = {
+        "id": str(uuid.uuid4()),
+        "tenant_id": current_user["tenant_id"],
+        "branch_id": current_user.get("branch_id"),
+        "customer_name": data.customer_name,
+        "customer_phone": data.customer_phone,
+        "party_size": data.party_size,
+        "notes": data.notes,
+        "status": "waiting",
+        "estimated_wait_minutes": 30,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    _waitlist.append(entry)
+    return entry
+
+
+@router.get("/waitlist")
+async def get_waitlist(
+    current_user: dict = Depends(get_current_user),
+):
+    """Get current waitlist for this tenant."""
+    return [w for w in _waitlist if w["tenant_id"] == current_user["tenant_id"] and w["status"] == "waiting"]
+
+
+@router.put("/waitlist/{entry_id}/seat")
+async def seat_from_waitlist(
+    entry_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Mark waitlist entry as seated."""
+    for w in _waitlist:
+        if w["id"] == entry_id and w["tenant_id"] == current_user["tenant_id"]:
+            w["status"] = "seated"
+            return {"id": entry_id, "status": "seated"}
+    raise HTTPException(status_code=404, detail="Entry not found")
+
+
+@router.delete("/waitlist/{entry_id}")
+async def remove_from_waitlist(
+    entry_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove entry from waitlist."""
+    for w in _waitlist:
+        if w["id"] == entry_id and w["tenant_id"] == current_user["tenant_id"]:
+            w["status"] = "removed"
+            return {"id": entry_id, "message": "Removed"}
+    raise HTTPException(status_code=404, detail="Entry not found")

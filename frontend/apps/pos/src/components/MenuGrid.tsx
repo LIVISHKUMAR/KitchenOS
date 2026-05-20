@@ -65,9 +65,10 @@ const MenuGrid: React.FC<MenuGridProps> = ({ onItemSelect }) => {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search menu..."
+          placeholder="Search menu... (F1)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          data-search-input
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>

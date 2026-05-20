@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.models import Tenant, Branch, User, Order, Payment, Customer
 from app.core.config import settings
@@ -14,12 +15,10 @@ router = APIRouter()
 
 @router.get("/dashboard")
 async def admin_dashboard(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("report:read")),
     db: Session = Depends(get_db_session)
 ):
     """Platform admin dashboard overview."""
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
 
     tenant_id = current_user["tenant_id"]
     now = datetime.utcnow()
@@ -121,12 +120,10 @@ async def admin_dashboard(
 
 @router.get("/system-health")
 async def system_health(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("settings:read")),
     db: Session = Depends(get_db_session)
 ):
     """System health metrics for admin."""
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
 
     # Total tenants
     total_tenants = db.query(func.count(Tenant.id)).scalar() or 0

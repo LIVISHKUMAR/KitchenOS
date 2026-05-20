@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.modules.table.service import TableService
 from app.modules.table.schemas import (
@@ -14,7 +15,7 @@ router = APIRouter()
 @router.post("/", response_model=TableResponse, status_code=status.HTTP_201_CREATED)
 async def create_table(
     table: TableCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("table:create")),
     db: Session = Depends(get_db_session)
 ):
     table_service = TableService(db)

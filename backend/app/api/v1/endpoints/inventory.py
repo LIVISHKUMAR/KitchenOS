@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.api.dependencies import get_current_user
+from app.modules.auth.rbac import require_permission
 from app.infrastructure.database import get_db_session
 from app.modules.inventory.service import InventoryService
 from app.modules.inventory.schemas import (
@@ -18,7 +19,7 @@ router = APIRouter()
 @router.post("/items", response_model=InventoryItemResponse, status_code=status.HTTP_201_CREATED)
 async def create_inventory_item(
     item: InventoryItemCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_permission("inventory:create")),
     db: Session = Depends(get_db_session)
 ):
     inventory_service = InventoryService(db)
