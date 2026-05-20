@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { type MenuItem, type MenuCategory } from '../api';
 import { useMenuItems, useMenuCategories } from '../hooks/useMenu';
+
+const ITEMS_PER_PAGE = 30; // Render 30 items at a time for performance
 
 interface MenuGridProps {
   onItemSelect: (menuItem: MenuItem) => void;
@@ -40,6 +42,29 @@ const MenuGrid: React.FC<MenuGridProps> = ({ onItemSelect }) => {
     const matchesSearch = !search || item.name.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   }), [items, selectedCategory, search]);
+
+  // Infinite scroll - show more items as user scrolls
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when filter changes
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [selectedCategory, search]);
+
+  // Intersection observer for infinite scroll
+  const lastItemRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) observerRef.current.disconnect();
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && visibleCount < filteredItems.length) {
+        setVisibleCount(prev => Math.min(prev + ITEMS_PER_PAGE, filteredItems.length));
+      }
+    }, { threshold: 0.1 });
+    if (node) observerRef.current.observe(node);
+  }, [visibleCount, filteredItems.length]);
+
+  const visibleItems = useMemo(() => filteredItems.slice(0, visibleCount), [filteredItems, visibleCount]);
 
   const loading = itemsLoading || catsLoading;
 
@@ -115,33 +140,42 @@ const MenuGrid: React.FC<MenuGridProps> = ({ onItemSelect }) => {
           {items.length === 0 ? 'No menu items available.' : 'No items match your search.'}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map(item => (
-            <div
-              key={item.id}
-              onClick={() => onItemSelect(item)}
-              className="bg-white rounded-lg shadow hover:shadow-md transition-all cursor-pointer p-4 active:scale-95"
-            >
-              <div className="flex items-start">
-                <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-lg">
-                  {item.is_veg ? '🟢' : '🔴'}
-                </div>
-                <div className="ml-3 flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{item.name}</h3>
-                  {item.description && (
-                    <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
-                  )}
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="font-bold text-lg">₹{Number(item.base_price).toFixed(2)}</span>
-                    {item.item_code && (
-                      <span className="text-xs text-gray-400">{item.item_code}</span>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visibleItems.map((item, index) => (
+              <div
+                key={item.id}
+                ref={index === visibleItems.length - 1 ? lastItemRef : undefined}
+                onClick={() => onItemSelect(item)}
+                className="bg-white rounded-lg shadow hover:shadow-md transition-all cursor-pointer p-4 active:scale-95"
+              >
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-lg">
+                    {item.is_veg ? '🟢' : '🔴'}
+                  </div>
+                  <div className="ml-3 flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{item.name}</h3>
+                    {item.description && (
+                      <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
                     )}
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="font-bold text-lg">₹{Number(item.base_price).toFixed(2)}</span>
+                      {item.item_code && (
+                        <span className="text-xs text-gray-400">{item.item_code}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+          {/* Load more indicator */}
+          {visibleCount < filteredItems.length && (
+            <div ref={loadMoreRef} className="text-center py-4 text-sm text-gray-400">
+              Loading more items... ({visibleCount} of {filteredItems.length})
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
