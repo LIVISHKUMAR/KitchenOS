@@ -1,11 +1,50 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# Python
 __pycache__
 *.pyc
 *.pyo
-.env
+*.egg-info
+.eggs
+dist
+build
 .venv
-*.db
-.git
-.gitignore
-README.md
+
+# Testing
 tests/
+.pytest_cache
+.coverage
+htmlcov
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Database files
+*.db
+*.sqlite3
+
+# Alembic (not needed in production image)
 alembic/

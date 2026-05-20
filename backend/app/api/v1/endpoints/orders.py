@@ -26,22 +26,40 @@ async def create_order(
     return order_service.create_order(order)
 
 
-@router.get("/", response_model=List[OrderResponse])
+@router.get("/")
 async def read_orders(
     branch_id: Optional[str] = None,
     order_status: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=1, le=100, description="Items per page"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db_session)
 ):
+    from app.api.v1.pagination import simple_paginate
     order_service = OrderService(db)
+
     if order_status:
         filters = {"tenant_id": current_user["tenant_id"]}
         if branch_id:
             filters["branch_id"] = branch_id
-        return order_service.repo.get_orders_by_status(filters=filters, statuses=[order_status])
-    return order_service.get_active_orders(branch_id=branch_id)
+        query = order_service.repo.get_orders_query(filters=filters, statuses=[order_status])
+    else:
+        query = order_service.repo.get_orders_query(
+            filters={"tenant_id": current_user["tenant_id"]},
+            statuses=["pending", "confirmed", "preparing", "ready", "completed"]
+        )
+        if branch_id:
+            query = query.filter(Order.branch_id == branch_id)
+
+    result = simple_paginate(query, page=page, page_size=page_size)
+    return {
+        "data": result["data"],
+        "total": result["total"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "has_next": result["has_next"],
+        "has_prev": result["has_prev"],
+    }
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

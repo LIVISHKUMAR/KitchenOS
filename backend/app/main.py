@@ -4,6 +4,11 @@ from app.core.config import settings
 from app.api.v1.router import api_router
 from app.api.health import router as health_router
 from app.api.middleware.security import SecurityHeadersMiddleware
+from app.api.middleware.request_tracing import RequestTracingMiddleware
+from app.infrastructure.logging import setup_logging
+
+# Initialize structured logging
+setup_logging(debug=settings.DEBUG)
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -44,6 +49,9 @@ app = FastAPI(
     ]
 )
 
+# Request tracing middleware (adds X-Request-ID, X-Response-Time)
+app.add_middleware(RequestTracingMiddleware)
+
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -64,10 +72,10 @@ if not settings.DEBUG:
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3004", "http://localhost:3000", "http://localhost:5173"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
 # Mount routers

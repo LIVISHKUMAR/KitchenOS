@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, List
 from contextvars import ContextVar
 
 
@@ -15,20 +15,30 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # CORS
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:3004",
+        "http://localhost:3005",
+        "http://localhost:3006",
+        "http://localhost:3007",
+        "http://localhost:5173",
+    ]
+
     # Database
     DATABASE_URL: str = "sqlite:///./kitchenos.db"
     DB_POOL_SIZE: int = 20
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
-    DB_POOL_RECYCLE: int = 1800  # Recycle connections every 30 minutes
+    DB_POOL_RECYCLE: int = 1800
     DB_ECHO: bool = False
 
     # Redis
     REDIS_URL: Optional[str] = "redis://localhost:6379/0"
-    CACHE_TTL: int = 300  # 5 minutes
+    CACHE_TTL: int = 300
 
     # RabbitMQ
-    RABBITMQ_URL: Optional[str] = "amqp://guest:guest@localhost:5672/"
+    RABBITMQ_URL: Optional[str] = None
 
     # Tenant Settings
     MAX_TENANTS_FREE: int = 1
