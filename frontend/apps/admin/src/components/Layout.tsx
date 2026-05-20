@@ -29,48 +29,53 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md">
-        <div className="p-4 border-b">
+      <aside className="w-64 bg-white border-r border-gray-100 flex flex-col" role="navigation" aria-label="Main navigation">
+        <div className="p-4 border-b border-gray-100">
           <h1 className="text-xl font-bold text-blue-600">KitchenOS</h1>
           <p className="text-sm text-gray-500">Admin Dashboard</p>
         </div>
-        <nav className="p-2">
-          {navItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg mb-1 ${
-                location.pathname === item.path
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 overflow-y-auto p-2">
+          {navItems.map(item => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mb-0.5 text-sm transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-600 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <span className="text-base" aria-hidden="true">{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-800">
+      <main className="flex-1 overflow-auto flex flex-col">
+        <header className="bg-white border-b border-gray-100 px-6 py-3 flex justify-between items-center sticky top-0 z-10">
+          <h2 className="text-lg font-semibold text-gray-900">
             {navItems.find(i => i.path === location.pathname)?.label || 'Dashboard'}
           </h2>
           <button
             onClick={() => {
-              localStorage.removeItem('admin_token')
-              window.location.reload()
+              localStorage.removeItem('admin_token');
+              window.location.reload();
             }}
-            className="text-sm text-gray-500 hover:text-red-500"
+            className="text-sm text-gray-500 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+            aria-label="Logout from admin"
           >
             Logout
           </button>
         </header>
-        <div className="p-6">
+        <div className="flex-1 p-6">
           {children}
         </div>
       </main>
