@@ -27,6 +27,7 @@ const ReportBuilder = lazy(() => import('./pages/ReportBuilder'))
 const AdvancedAnalytics = lazy(() => import('./pages/AdvancedAnalytics'))
 const Compliance = lazy(() => import('./pages/Compliance'))
 const Settings = lazy(() => import('./pages/Settings'))
+const Onboarding = lazy(() => import('./pages/Onboarding'))
 
 // Loading fallback
 const PageLoader = () => (
@@ -69,6 +70,7 @@ function App() {
             <Route path="/advanced-analytics" element={<AdvancedAnalytics />} />
             <Route path="/compliance" element={<Compliance />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </Suspense>
