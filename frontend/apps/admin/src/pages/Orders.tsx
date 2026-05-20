@@ -51,7 +51,39 @@ export default function Orders() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
       apiClient.put(`/orders/${orderId}/status`, null, { params: { new_status: status } }),
-    onSuccess: () => {
+
+    // Optimistic update - update UI immediately before server responds
+    onMutate: async ({ orderId, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.orders.all });
+
+      // Snapshot previous value
+      const previousOrders = queryClient.getQueryData(queryKeys.orders.list({ status: filter }));
+
+      // Optimistically update
+      queryClient.setQueryData(queryKeys.orders.list({ status: filter }), (old: any) => {
+        if (!old) return old;
+        const orders = old.data || old;
+        return {
+          ...old,
+          data: orders.map((order: Order) =>
+            order.id === orderId ? { ...order, status } : order
+          ),
+        };
+      });
+
+      return { previousOrders };
+    },
+
+    // On error, roll back
+    onError: (_err, _variables, context) => {
+      if (context?.previousOrders) {
+        queryClient.setQueryData(queryKeys.orders.list({ status: filter }), context.previousOrders);
+      }
+    },
+
+    // Always refetch after error or success
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
     },
   });
