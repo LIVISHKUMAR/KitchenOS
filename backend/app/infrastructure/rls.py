@@ -2,6 +2,9 @@
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RowLevelSecurity:
@@ -21,9 +24,9 @@ class RowLevelSecurity:
         """Enable RLS on all tenant tables."""
         for table in cls.TENANT_TABLES:
             try:
-                db.execute(text(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
+                db.execute(text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
             except Exception as e:
-                print(f"RLS enable failed for {table}: {e}")
+                logger.warning(f"RLS enable failed for {table}: {e}")
         db.commit()
 
     @classmethod
@@ -31,29 +34,34 @@ class RowLevelSecurity:
         """Create RLS policies for tenant isolation."""
         for table in cls.TENANT_TABLES:
             try:
-                # Policy: users can only see their own tenant's data
-                policy_sql = f"""
-                CREATE POLICY tenant_isolation_{table} ON {table}
-                    USING (tenant_id = current_setting('app.current_tenant_id')::VARCHAR)
-                    WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::VARCHAR)
-                """
-                db.execute(text(policy_sql))
-            except Exception as e:
+                policy_sql = text(f"""
+                    CREATE POLICY tenant_isolation_{table} ON "{table}"
+                        USING (tenant_id = current_setting('app.current_tenant_id')::VARCHAR)
+                        WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::VARCHAR)
+                """)
+                db.execute(policy_sql)
+            except Exception:
                 # Policy might already exist
                 pass
         db.commit()
 
     @classmethod
     def set_tenant_context(cls, db: Session, tenant_id: str):
-        """Set the current tenant context for RLS."""
-        db.execute(text(f"SET app.current_tenant_id = '{tenant_id}'"))
+        """Set the current tenant context for RLS.
+
+        Uses parameterized query to prevent SQL injection.
+        """
+        db.execute(
+            text("SELECT set_config('app.current_tenant_id', :tenant_id, false)"),
+            {"tenant_id": tenant_id}
+        )
 
     @classmethod
     def disable_rls(cls, db: Session):
         """Disable RLS on all tenant tables (for admin operations)."""
         for table in cls.TENANT_TABLES:
             try:
-                db.execute(text(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY"))
+                db.execute(text(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY'))
             except Exception:
                 pass
         db.commit()

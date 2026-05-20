@@ -22,7 +22,7 @@ class Tenant(Base):
     max_branches = Column(Integer, default=1)
     max_users = Column(Integer, default=10)
     max_terminals = Column(Integer, default=5)
-    settings = Column(JSON, default={})
+    settings = Column(JSON, default=dict)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -46,7 +46,7 @@ class Branch(Base):
     currency = Column(String(3), default='INR')
     tax_identifier = Column(String(50))
     business_type = Column(String(50))
-    opening_hours = Column(JSON, default={})
+    opening_hours = Column(JSON, default=dict)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -105,7 +105,7 @@ class MenuItem(Base):
 
     tax_rate = Column(Numeric(5, 2), default=0)
     is_veg = Column(Boolean, default=True)
-    contains_allergens = Column(JSON, default=[])
+    contains_allergens = Column(JSON, default=list)
 
     preparation_time_minutes = Column(Integer, default=15)
     calories = Column(Integer)
@@ -115,7 +115,7 @@ class MenuItem(Base):
     combo_details = Column(JSON)
 
     printer_routing = Column(JSON)
-    recipe_ingredients = Column(JSON, default=[])
+    recipe_ingredients = Column(JSON, default=list)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -179,7 +179,7 @@ class OrderItem(Base):
 
     variant_id = Column(String(36), ForeignKey("menu_variants.id"))
     variant_name = Column(String(255))
-    modifiers = Column(JSON, default=[])
+    modifiers = Column(JSON, default=list)
 
     cooking_instructions = Column(Text)
     course_type = Column(String(20))
@@ -331,7 +331,7 @@ class Customer(Base):
     customer_type = Column(String(20), default='regular')
     membership_tier = Column(String(20))
 
-    preferences = Column(JSON, default={})
+    preferences = Column(JSON, default=dict)
     delivery_addresses = Column(JSON, default='[]')
 
     is_active = Column(Boolean, default=True)

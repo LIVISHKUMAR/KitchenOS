@@ -22,16 +22,46 @@ class OrderService:
     def create_order(self, data: OrderCreate) -> dict:
         order_number = self._generate_order_number()
 
+        # Bulk-fetch all menu items, variants, and modifiers to avoid N+1 queries
+        item_ids = [item.menu_item_id for item in data.items]
+        variant_ids = [item.variant_id for item in data.items if item.variant_id]
+        modifier_ids = []
+        for item in data.items:
+            if item.modifiers:
+                for mod_ref in item.modifiers:
+                    mod_id = mod_ref.get("id") if isinstance(mod_ref, dict) else mod_ref
+                    if mod_id:
+                        modifier_ids.append(mod_id)
+
+        menu_items_map = {
+            str(mi.id): mi for mi in
+            self.db.query(MenuItem).filter(MenuItem.id.in_(item_ids)).all()
+        }
+        variants_map = {
+            str(v.id): v for v in
+            self.db.query(MenuVariant).filter(MenuVariant.id.in_(variant_ids)).all()
+        } if variant_ids else {}
+        modifiers_map = {
+            str(m.id): m for m in
+            self.db.query(MenuModifier).filter(MenuModifier.id.in_(modifier_ids)).all()
+        } if modifier_ids else {}
+
         # Calculate item totals with modifier/variant pricing
         subtotal = 0.0
         enriched_items = []
 
         for item_data in data.items:
-            item_total = float(item_data.unit_price) * float(item_data.quantity)
+            menu_item = menu_items_map.get(item_data.menu_item_id)
+            if not menu_item:
+                raise ValueError(f"Menu item {item_data.menu_item_id} not found")
+
+            # SECURITY: Always use server-side price from DB, never client-supplied price
+            unit_price = float(menu_item.base_price)
+            item_total = unit_price * float(item_data.quantity)
 
             # Add variant price adjustment
             if item_data.variant_id:
-                variant = self.db.query(MenuVariant).filter(MenuVariant.id == item_data.variant_id).first()
+                variant = variants_map.get(item_data.variant_id)
                 if variant:
                     item_total += float(variant.price_adjustment) * float(item_data.quantity)
 
@@ -41,14 +71,12 @@ class OrderService:
                 for mod_ref in item_data.modifiers:
                     mod_id = mod_ref.get("id") if isinstance(mod_ref, dict) else mod_ref
                     if mod_id:
-                        modifier = self.db.query(MenuModifier).filter(MenuModifier.id == mod_id).first()
+                        modifier = modifiers_map.get(mod_id)
                         if modifier:
                             modifier_total += float(modifier.price) * float(item_data.quantity)
 
             item_total += modifier_total
-            # Item-level tax rate: use menu item's tax_rate, fallback to 18%
-            menu_item = self.db.query(MenuItem).filter(MenuItem.id == item_data.menu_item_id).first()
-            item_tax_rate = float(menu_item.tax_rate) if menu_item and menu_item.tax_rate else 18.0
+            item_tax_rate = float(menu_item.tax_rate) if menu_item.tax_rate else 18.0
             tax_amount = item_total * (item_tax_rate / 100)
 
             enriched_items.append({
@@ -57,7 +85,7 @@ class OrderService:
                 "item_name": item_data.item_name,
                 "item_code": item_data.item_code,
                 "quantity": item_data.quantity,
-                "unit_price": item_data.unit_price,
+                "unit_price": unit_price,
                 "tax_amount": round(tax_amount, 2),
                 "discount_amount": item_data.discount_amount or 0,
                 "total": round(item_total, 2),
@@ -222,9 +250,14 @@ class OrderService:
             return subtotal * 0.18
 
     def _generate_order_number(self) -> str:
+        """Generate a unique order number.
+
+        Uses date prefix + short UUID suffix to avoid race conditions
+        that occur with sequential counting under concurrent requests.
+        """
         today = datetime.utcnow().strftime("%Y%m%d")
-        count = self.repo.get_today_order_count(tenant_context.tenant_id)
-        return f"ORD-{today}-{count + 1:04d}"
+        short_id = uuid.uuid4().hex[:8].upper()
+        return f"ORD-{today}-{short_id}"
 
     def _publish_event(self, event):
         try:

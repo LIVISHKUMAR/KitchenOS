@@ -143,26 +143,29 @@ const POSPage = () => {
   };
 
   const handlePaymentComplete = async (paymentMethod: string) => {
+    // CRITICAL: Capture receipt data BEFORE payment clears the cart
+    const receiptSnapshot = {
+      id: Date.now().toString(),
+      items: currentOrder.items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.unitPrice * item.quantity,
+      })),
+      subtotal: getSubtotal(),
+      discount: getDiscount(),
+      discountLabel: discountLabel,
+      tax: getTax(),
+      total: getTotal(),
+      paymentMethod,
+      tableId: selectedTableId,
+    };
+
     const success = await completePayment(paymentMethod);
     if (success) {
       setPaymentModalOpen(false);
       showToast('Payment successful!', 'success');
-      setReceiptData({
-        id: Date.now().toString(),
-        items: currentOrder.items.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.unitPrice * item.quantity,
-        })),
-        subtotal: getSubtotal(),
-        discount: getDiscount(),
-        discountLabel: discountLabel,
-        tax: getTax(),
-        total: getTotal(),
-        paymentMethod,
-        tableId: selectedTableId,
-      });
+      setReceiptData(receiptSnapshot);
     } else {
       showToast('Payment failed. Please try again.', 'error');
     }
