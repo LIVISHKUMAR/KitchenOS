@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, memo } from 'react'
 import axios from 'axios'
+import { Clock } from '../components/Clock'
 
 interface KOTItem {
   id: string
@@ -31,16 +32,9 @@ export default function KDSDashboard() {
   const [orders, setOrders] = useState<KOTOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(false)
-  const [currentTime, setCurrentTime] = useState(new Date())
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout>>()
   const audioContextRef = useRef<AudioContext | null>(null)
-
-  // Update clock every second
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem('kds_token') || localStorage.getItem('access_token')
@@ -279,9 +273,7 @@ export default function KDSDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-lg font-mono text-white">
-            {currentTime.toLocaleTimeString()}
-          </span>
+          <Clock />
           <button
             onClick={loadOrders}
             className="px-4 py-2 bg-orange-500 rounded hover:bg-orange-600 text-sm text-white"
