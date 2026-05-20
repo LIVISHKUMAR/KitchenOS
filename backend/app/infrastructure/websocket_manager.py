@@ -106,16 +106,21 @@ class WebSocketManager:
 
     async def broadcast_to_branch(self, tenant_id: str, branch_id: str,
                                    message: dict, exclude_device: str = None):
-        """Broadcast message to all connections in a branch."""
-        # Publish to Redis for multi-instance support
+        """Broadcast message to all connections in a branch.
+
+        When Redis is available, only publishes to Redis. The pub/sub handler
+        (_listen_pubsub) will deliver to local connections. This prevents
+        double-send in single-instance deployments.
+        """
         if self._redis:
+            # Publish to Redis — pub/sub handler delivers locally
             await self._redis.publish(
                 f"ws:{tenant_id}:{branch_id}",
                 json.dumps({"message": message, "exclude_device": exclude_device})
             )
-
-        # Send to local connections
-        await self._send_local(tenant_id, branch_id, message, exclude_device)
+        else:
+            # No Redis — send directly to local connections
+            await self._send_local(tenant_id, branch_id, message, exclude_device)
 
     async def broadcast_to_tenant(self, tenant_id: str, message: dict):
         """Broadcast to all connections in a tenant."""
@@ -124,10 +129,10 @@ class WebSocketManager:
                 f"ws:{tenant_id}:*",
                 json.dumps({"message": message})
             )
-
-        tenant_conns = self._connections.get(tenant_id, {})
-        for branch_id in tenant_conns:
-            await self._send_local(tenant_id, branch_id, message)
+        else:
+            tenant_conns = self._connections.get(tenant_id, {})
+            for branch_id in tenant_conns:
+                await self._send_local(tenant_id, branch_id, message)
 
     async def send_to_client_type(self, tenant_id: str, branch_id: str,
                                    client_type: str, message: dict):

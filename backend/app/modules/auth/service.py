@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from app.modules.auth.schemas import RegisterRequest, LoginRequest
-from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token, decode_token
+from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token, decode_refresh_token
 from app.core.config import tenant_context
 from app.api.exceptions import UnauthorizedException, ConflictException
 from app.models import Tenant, User, Branch
@@ -142,7 +142,7 @@ class AuthService:
         }
 
     def refresh_access_token(self, refresh_token: str) -> dict:
-        payload = decode_token(refresh_token)
+        payload = decode_refresh_token(refresh_token)
 
         if not payload:
             raise UnauthorizedException("Invalid refresh token")
