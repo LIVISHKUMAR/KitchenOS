@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/queryClient'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 
@@ -44,7 +45,8 @@ function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Layout>
           <Suspense fallback={<PageLoader />}>
@@ -77,6 +79,7 @@ function App() {
         </Layout>
       </BrowserRouter>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

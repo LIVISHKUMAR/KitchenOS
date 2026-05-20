@@ -1,22 +1,27 @@
 import React, { memo } from 'react';
 import { LanguageSwitcher } from '../LanguageSwitcher';
+import { BarcodeScanner } from '../BarcodeScanner';
+import type { MenuItem } from '../../api';
 
 interface POSHeaderProps {
   itemCount: number;
   onShiftClosing: () => void;
   onLogout: () => void;
+  onItemScanned: (item: MenuItem) => void;
 }
 
-const POSHeader: React.FC<POSHeaderProps> = memo(({ itemCount, onShiftClosing, onLogout }) => {
+const POSHeader: React.FC<POSHeaderProps> = memo(({ itemCount, onShiftClosing, onLogout, onItemScanned }) => {
   return (
     <header className="bg-white border-b px-6 py-2 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <h2 className="text-lg font-semibold">POS Terminal</h2>
+        <BarcodeScanner onItemScanned={onItemScanned} />
         <div className="hidden lg:flex items-center gap-1 text-xs text-gray-400">
           <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px]">F1</kbd><span>Search</span>
           <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] ml-2">F2</kbd><span>Pay</span>
           <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] ml-2">F3</kbd><span>Hold</span>
           <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] ml-2">F4</kbd><span>Clear</span>
+          <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] ml-2">F5</kbd><span>Scan</span>
           <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] ml-2">Esc</kbd><span>Close</span>
         </div>
       </div>
